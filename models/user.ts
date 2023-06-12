@@ -3,13 +3,25 @@ import uniqueValidator from "mongoose-unique-validator";
 
 const { Schema } = mongoose;
 
+export interface IBook {
+  id: string;
+  rating: number;
+  pages: number;
+}
+export interface IUser {
+  name: string;
+  login: string;
+  password: string;
+  books?: IBook[];
+}
+
 const bookSchema = new Schema({
   id: String,
   rating: Number,
   pages: Number,
 });
 
-const userSchema = new Schema({
+const userSchema = new Schema<IUser>({
   name: {
     type: String,
     required: true,
@@ -27,4 +39,4 @@ const userSchema = new Schema({
 });
 userSchema.plugin(uniqueValidator);
 
-export default mongoose.model("User", userSchema);
+export default mongoose.model<IUser>("User", userSchema);

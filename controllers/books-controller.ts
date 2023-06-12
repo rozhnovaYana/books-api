@@ -5,7 +5,6 @@ import HttpError from "../models/http-error";
 
 import Book, { IBook } from "../models/book";
 import { HydratedDocument } from "mongoose";
-let { books } = require("../data");
 
 export const getBooks = async (
   req: Request,
@@ -44,20 +43,6 @@ export const getBookById = async (
     book: book.toObject({ getters: true }),
   });
 };
-// export const getBooksByUserId = (
-//   req: Request,
-//   res: Response,
-//   next: NextFunction
-// ) => {
-//   const user = req.params.uid;
-//   const filteredBooks = books.filter((el: IBook) => el.creator === user);
-//   if (!filteredBooks || filteredBooks.length === 0) {
-//     return next(new HttpError("Cannot find books for the user id", 404));
-//   }
-//   res.json({
-//     books: filteredBooks,
-//   });
-// };
 export const createBook = async (
   req: Request,
   res: Response,
