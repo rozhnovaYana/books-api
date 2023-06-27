@@ -8,6 +8,7 @@ import {
   deleteBook,
   createBooks,
   getBooks,
+  addRating,
 } from "../controllers/books-controller";
 
 const router = express.Router();
@@ -22,14 +23,14 @@ const stringNotEmpty = (field: string, optional: boolean = false) => {
 
 router.get("/:bid", getBookById);
 router.get("/", getBooks);
-// router.get("/user/:uid", getBooksByUserId);
 
 router.patch(
   "/:bid",
   ["author", "title", "description", "cover", "release_date"].map((i: string) =>
     stringNotEmpty(i, true)
   ),
-  body("pages").trim().notEmpty().isNumeric(),
+  body("pages").trim().optional().notEmpty().isNumeric(),
+  body("userId").trim().notEmpty(),
   updateBook
 );
 
@@ -55,6 +56,13 @@ router.post(
   ].map((i: string) => stringNotEmpty(i)),
   body("books.*.pages").trim().notEmpty().isNumeric(),
   createBooks
+);
+
+router.post(
+  "/rating/:bid",
+  stringNotEmpty("uid"),
+  body("score").trim().notEmpty().isNumeric(),
+  addRating
 );
 
 export default router;

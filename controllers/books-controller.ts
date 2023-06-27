@@ -1,10 +1,11 @@
+import mongoose, { HydratedDocument } from "mongoose";
 import { NextFunction, Request, Response } from "express";
 import { validationResult } from "express-validator";
 
 import HttpError from "../models/http-error";
 
 import Book, { IBook } from "../models/book";
-import { HydratedDocument } from "mongoose";
+import User, { IUser } from "../models/user";
 
 export const getBooks = async (
   req: Request,
@@ -59,6 +60,11 @@ export const createBook = async (
     cover,
     pages,
     release_date,
+    rating: {
+      score: 0,
+      reviews: [],
+    },
+    users: [],
   });
   try {
     await book.save();
@@ -104,7 +110,7 @@ export const updateBook = async (
       description,
       cover,
       pages,
-      release_date: new Date(release_date),
+      release_date: release_date && new Date(release_date),
     });
   } catch (err) {
     return next(new HttpError("Something went wrong.", 500));
@@ -119,11 +125,72 @@ export const deleteBook = async (
   next: NextFunction
 ) => {
   try {
-    await Book.findByIdAndDelete(req.params.bid);
+    const book = await Book.findById(req.params.bid);
+    if (!book) {
+      return next(new HttpError("Couldn`t find book for this id.", 404));
+    }
+    const session = await mongoose.startSession();
+    await session.withTransaction(async () => {
+      const doc = await book.populate<{ users: HydratedDocument<IUser>[] }>(
+        "users"
+      );
+
+      for await (const user of doc.users) {
+        user.books.pull(book);
+        await user.save({ session });
+      }
+      await book.deleteOne({ session });
+
+      await session.commitTransaction();
+
+      session.endSession();
+    });
   } catch (err) {
-    return next(new HttpError("Something wentwrong", 500));
+    return next(new HttpError("Something went wrong", 500));
   }
   res.status(200).json({
     message: `Book with id=${req.params.bid} was deleted.`,
+  });
+};
+export const addRating = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  let book: HydratedDocument<IBook> | null;
+  let user: HydratedDocument<IUser> | null;
+  const { uid, score } = req.body;
+  try {
+    book = await Book.findById(req.params.bid);
+    user = await User.findById(uid);
+  } catch (err) {
+    return next(new HttpError(`Something went wrong`, 500));
+  }
+  if (!book || !user) {
+    const message = !book ? "Book" : "User";
+    return next(new HttpError(`${message} not found`, 404));
+  }
+  const reviews = book.rating.reviews;
+  const raviewExist = reviews.find((el) => el.id == uid);
+
+  if (raviewExist) {
+    raviewExist.score = score;
+  } else {
+    reviews.push({
+      id: user._id,
+      score,
+    });
+  }
+  const totalScore: number = reviews.reduce((acc, el) => {
+    return acc + el.score;
+  }, 0);
+  book.rating.score = totalScore / reviews.length;
+  try {
+    await book.save();
+  } catch (err) {
+    return next(new HttpError(`Something went wrong`, 500));
+  }
+  res.json({
+    book,
   });
 };

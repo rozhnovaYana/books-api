@@ -30,7 +30,7 @@ app.use((error: any, req: Request, res: Response, next: NextFunction) => {
 // error handlers
 mongoose
   .connect(
-    "mongodb+srv://yanatska:LqfD4fqPhZPJGW4s@cluster0.uwshtxc.mongodb.net/?retryWrites=true&w=majority"
+    "mongodb+srv://yanatska:LqfD4fqPhZPJGW4s@cluster0.uwshtxc.mongodb.net/books?retryWrites=true&w=majority"
   )
   .then(() => {
     app.listen(5000);

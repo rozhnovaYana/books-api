@@ -1,15 +1,25 @@
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 
 const { Schema } = mongoose;
 
+export interface IUser {
+  id: Types.ObjectId;
+}
 export interface IBook {
-  id: string;
   author: string;
   title: string;
   description?: string;
   cover?: string;
   pages?: number;
   release_date?: string;
+  rating: {
+    score: number;
+    reviews: {
+      id: mongoose.Types.ObjectId;
+      score: number;
+    }[];
+  };
+  users: mongoose.Types.ObjectId[];
 }
 const bookSchema = new Schema<IBook>({
   author: {
@@ -24,6 +34,24 @@ const bookSchema = new Schema<IBook>({
   cover: String,
   pages: Number,
   release_date: Date,
+  rating: {
+    score: Number,
+    reviews: [
+      {
+        id: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        score: Number,
+      },
+    ],
+  },
+  users: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+  ],
 });
 
 export default mongoose.model<IBook>("Book", bookSchema);

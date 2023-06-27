@@ -1,10 +1,11 @@
+import mongoose, { HydratedDocument } from "mongoose";
 import { NextFunction, Request, Response } from "express";
-import { v4 } from "uuid";
 import { validationResult } from "express-validator";
 
 import HttpError from "../models/http-error";
+
 import User, { IUser } from "../models/user";
-import { HydratedDocument } from "mongoose";
+import Book, { IBook } from "../models/book";
 
 export const getAllUsers = async (
   req: Request,
@@ -39,7 +40,7 @@ export const signUp = async (
     if (existingUser) {
       return next(new HttpError("The user already exists", 401));
     }
-    user = new User({ login, name, password });
+    user = new User({ login, name, password, books: [] });
     user.save();
   } catch (err) {
     return next(new HttpError("Something went wrong.", 500));
@@ -69,6 +70,42 @@ export const login = async (
     return next(new HttpError("Something went wrong.", 500));
   }
 
+  res.status(200).json({
+    user,
+  });
+};
+
+export const addBook = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const { bookId } = req.body;
+  let book: HydratedDocument<IBook> | null;
+  let user: HydratedDocument<IUser> | null;
+  try {
+    book = await Book.findById(bookId);
+    user = await User.findById(req.params.uid);
+    if (!book || !user) {
+      const message = !book ? "Book" : "User";
+      return next(new HttpError(`${message} is not found.`, 404));
+    }
+    if(user.books.indexOf(book?.id) > -1) {
+      return next(new HttpError(`The book already exists.`, 404));
+    }
+    const session = await mongoose.startSession();
+    await session.withTransaction(async () => {
+      user?._id && book?.users.push(user._id );
+      await book?.save({ session });
+      book?._id && user?.books.push(book._id);
+      await user?.save({ session });
+      await session.commitTransaction();
+
+      session.endSession();
+    });
+  } catch (err) {
+    return next(new HttpError("Something went wrong.", 500));
+  }
   res.status(200).json({
     user,
   });

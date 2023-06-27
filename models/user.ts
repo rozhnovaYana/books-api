@@ -1,25 +1,14 @@
-import mongoose from "mongoose";
+import mongoose, { HydratedDocument, Types } from "mongoose";
 import uniqueValidator from "mongoose-unique-validator";
 
 const { Schema } = mongoose;
 
-export interface IBook {
-  id: string;
-  rating: number;
-  pages: number;
-}
 export interface IUser {
   name: string;
   login: string;
   password: string;
-  books?: IBook[];
+  books: mongoose.Types.Array<mongoose.Types.ObjectId>;
 }
-
-const bookSchema = new Schema({
-  id: String,
-  rating: Number,
-  pages: Number,
-});
 
 const userSchema = new Schema<IUser>({
   name: {
@@ -35,7 +24,13 @@ const userSchema = new Schema<IUser>({
     type: String,
     required: true,
   },
-  books: [bookSchema],
+  books: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Book",
+      required: true,
+    },
+  ],
 });
 userSchema.plugin(uniqueValidator);
 

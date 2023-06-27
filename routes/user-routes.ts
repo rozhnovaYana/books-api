@@ -1,7 +1,12 @@
 import express from "express";
 import { body } from "express-validator";
 
-import { getAllUsers, signUp, login } from "../controllers/users-controller";
+import {
+  getAllUsers,
+  signUp,
+  login,
+  addBook,
+} from "../controllers/users-controller";
 
 const createValidationChain = () => [
   body("login").trim().normalizeEmail().notEmpty().isEmail(),
@@ -20,5 +25,7 @@ router.post(
 );
 
 router.post("/login", createValidationChain(), login);
+
+router.post("/:uid/book", body("bookId").trim().notEmpty(), addBook);
 
 export default router;
