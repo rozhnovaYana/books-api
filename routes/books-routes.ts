@@ -38,7 +38,7 @@ router.delete("/:bid", deleteBook);
 
 router.post(
   "/",
-  ["author", "title", "description", "cover", "release_date"].map((i: string) =>
+  ["author", "title", "release_date"].map((i: string) =>
     stringNotEmpty(i)
   ),
   body("pages").trim().notEmpty().isNumeric(),

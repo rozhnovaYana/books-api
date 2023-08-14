@@ -7,7 +7,11 @@ export interface IUser {
   name: string;
   login: string;
   password: string;
-  books: mongoose.Types.Array<mongoose.Types.ObjectId>;
+  books: mongoose.Types.Array<{
+    id: mongoose.Types.ObjectId;
+    isFavourite: boolean;
+    status: String;
+  }>;
 }
 
 const userSchema = new Schema<IUser>({
@@ -26,9 +30,9 @@ const userSchema = new Schema<IUser>({
   },
   books: [
     {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Book",
-      required: true,
+      id: { type: mongoose.Schema.Types.ObjectId, ref: "Book", required: true },
+      isFavourite: Boolean,
+      status: String,
     },
   ],
 });

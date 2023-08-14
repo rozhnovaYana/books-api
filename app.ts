@@ -1,6 +1,6 @@
 import express, { NextFunction, Request, Response } from "express";
 import bodyParser from "body-parser";
-
+import cors from "cors";
 import booksRoutes from "./routes/books-routes";
 import userRoutes from "./routes/user-routes";
 
@@ -9,6 +9,7 @@ import mongoose from "mongoose";
 
 const app = express();
 
+app.use(cors());
 app.use(bodyParser.json());
 
 app.use("/api/books", booksRoutes);

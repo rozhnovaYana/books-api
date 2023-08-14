@@ -52,7 +52,12 @@ export const createBook = async (
   if (!validationResult(req).isEmpty()) {
     return next(new HttpError("Invalid inputs", 422));
   }
-  const { author, title, description, cover, pages, release_date } = req.body;
+  const { author, title, description, cover, pages, release_date, isbn } =
+    req.body;
+  const bookExisting = isbn && (await Book.findOne({ isbn }));
+  if (bookExisting) {
+    return next(new HttpError("Book is already exists.", 404));
+  }
   const book = new Book({
     author,
     title,
@@ -65,6 +70,7 @@ export const createBook = async (
       reviews: [],
     },
     users: [],
+    isbn,
   });
   try {
     await book.save();
@@ -102,7 +108,8 @@ export const updateBook = async (
     return next(new HttpError("Invalid inputs", 422));
   }
   let updatedBook: HydratedDocument<IBook> | null;
-  const { author, title, description, cover, pages, release_date } = req.body;
+  const { author, title, description, cover, pages, release_date, isbn } =
+    req.body;
   try {
     updatedBook = await Book.findByIdAndUpdate(req.params.bid, {
       author,
@@ -111,6 +118,7 @@ export const updateBook = async (
       cover,
       pages,
       release_date: release_date && new Date(release_date),
+      isbn,
     });
   } catch (err) {
     return next(new HttpError("Something went wrong.", 500));
@@ -136,7 +144,7 @@ export const deleteBook = async (
       );
 
       for await (const user of doc.users) {
-        user.books.pull(book);
+        user.books.pull({ id: book });
         await user.save({ session });
       }
       await book.deleteOne({ session });

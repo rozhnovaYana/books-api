@@ -24,7 +24,25 @@ export const getAllUsers = async (
     users,
   });
 };
+export const getUserById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  let user: HydratedDocument<IBook> | null;
+  try {
+    user = await User.findById(req.params.uid);
+    if (!user) {
+      return next(new HttpError("Cannot find user for the id", 404));
+    }
+  } catch (err) {
+    return next(new HttpError("Something went wrong.", 500));
+  }
 
+  res.json({
+    user: user.toObject({ getters: true }),
+  });
+};
 export const signUp = async (
   req: Request,
   res: Response,
@@ -64,7 +82,7 @@ export const login = async (
       return next(new HttpError("User not found", 401));
     }
     if (user?.password !== password) {
-      return next(new HttpError("Password is not correctd", 401));
+      return next(new HttpError("Password is not correct", 401));
     }
   } catch (err) {
     return next(new HttpError("Something went wrong.", 500));
@@ -90,14 +108,15 @@ export const addBook = async (
       const message = !book ? "Book" : "User";
       return next(new HttpError(`${message} is not found.`, 404));
     }
-    if(user.books.indexOf(book?.id) > -1) {
+    if (user.books.find((el) => el.id.toString() === bookId)) {
       return next(new HttpError(`The book already exists.`, 404));
     }
     const session = await mongoose.startSession();
     await session.withTransaction(async () => {
-      user?._id && book?.users.push(user._id );
+      user?._id && book?.users.push(user._id);
       await book?.save({ session });
-      book?._id && user?.books.push(book._id);
+      book?._id &&
+        user?.books.push({ id: book._id, status: "new", isFavourite: false });
       await user?.save({ session });
       await session.commitTransaction();
 
@@ -109,4 +128,41 @@ export const addBook = async (
   res.status(200).json({
     user,
   });
+};
+export const updateBook = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  let book: HydratedDocument<IBook> | null;
+  let user: HydratedDocument<IUser> | null;
+  const { status, isFavourite, bookId } = req.body;
+  try {
+    book = await Book.findById(bookId);
+    user = await User.findById(req.params.uid);
+    let bookExisting =
+      user && user.books.find((el) => el.id?.toString() === bookId);
+
+    if (!book || !user || !bookExisting) {
+      const message = !book || !bookExisting ? "Book" : "User";
+      return next(new HttpError(`${message} is not found.`, 404));
+    }
+    user = await User.findOneAndUpdate(
+      {
+        "books.id": bookId,
+      },
+      {
+        $set: {
+          "books.$.status": status,
+          "books.$.isFavourite": isFavourite,
+        },
+      },
+      {
+        new: true,
+      }
+    );
+  } catch (err) {
+    return next(new HttpError("Something went wrong.", 500));
+  }
+  res.status(200).json({ user });
 };

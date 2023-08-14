@@ -20,6 +20,7 @@ export interface IBook {
     }[];
   };
   users: mongoose.Types.ObjectId[];
+  isbn: string;
 }
 const bookSchema = new Schema<IBook>({
   author: {
@@ -30,6 +31,7 @@ const bookSchema = new Schema<IBook>({
     type: String,
     required: true,
   },
+  isbn: String,
   description: String,
   cover: String,
   pages: Number,
