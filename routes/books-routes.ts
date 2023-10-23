@@ -9,6 +9,7 @@ import {
   createBooks,
   getBooks,
   addRating,
+  getUserBooks
 } from "../controllers/books-controller";
 
 const router = express.Router();
@@ -20,7 +21,7 @@ const stringNotEmpty = (field: string, optional: boolean = false) => {
     return body(field).trim().optional().notEmpty();
   }
 };
-
+router.get("/user/:uid", getUserBooks);
 router.get("/:bid", getBookById);
 router.get("/", getBooks);
 

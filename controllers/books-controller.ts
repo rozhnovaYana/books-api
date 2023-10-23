@@ -24,6 +24,28 @@ export const getBooks = async (
     books,
   });
 };
+export const getUserBooks = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const userID = req.params.uid;
+  const user = await User.findById(userID);
+  if (!user) {
+    return next(new HttpError("Could not find user", 500));
+  }
+  let books: HydratedDocument<IBook>[] | null = [];
+  try {
+    for await (const book of Book.find({ users: userID })) {
+      books.push(book.toObject({ getters: true }));
+    }
+  } catch (err) {
+    return next(new HttpError("Something went wrong.", 500));
+  }
+  res.json({
+    books,
+  });
+};
 
 export const getBookById = async (
   req: Request,
@@ -52,12 +74,17 @@ export const createBook = async (
   if (!validationResult(req).isEmpty()) {
     return next(new HttpError("Invalid inputs", 422));
   }
-  const { author, title, description, cover, pages, release_date, isbn } =
-    req.body;
-  const bookExisting = isbn && (await Book.findOne({ isbn }));
-  if (bookExisting) {
-    return next(new HttpError("Book is already exists.", 404));
-  }
+  const {
+    author,
+    title,
+    description,
+    cover,
+    pages,
+    release_date,
+    isbn,
+    userID,
+  } = req.body;
+
   const book = new Book({
     author,
     title,
@@ -69,11 +96,28 @@ export const createBook = async (
       score: 0,
       reviews: [],
     },
-    users: [],
+    users: [userID],
     isbn,
   });
+  let user: HydratedDocument<IUser> | null;
   try {
-    await book.save();
+    const session = await mongoose.startSession();
+    await session.withTransaction(async () => {
+      user = await User.findById(userID);
+      if (!user) {
+        return next(new HttpError("Could not find user", 500));
+      }
+      await book.save({ session });
+      user.books.push({
+        id: book._id,
+        status: "new",
+        isFavourite: false,
+      });
+      await user?.save({ session });
+      await session.commitTransaction();
+
+      session.endSession();
+    });
   } catch (err) {
     return next(new HttpError("Could not create a new book.", 500));
   }
